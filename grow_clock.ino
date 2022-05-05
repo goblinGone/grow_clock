@@ -1,6 +1,9 @@
 
 #include "Wire.h"
+#include "Servo.h"
+
 #define DS3231_I2C_ADDRESS 0x68
+
 // Convert normal decimal numbers to binary coded decimal
 byte decToBcd(byte val){
   return( (val/10*16) + (val%10) );
@@ -9,6 +12,11 @@ byte decToBcd(byte val){
 byte bcdToDec(byte val){
   return( (val/16*10) + (val%16) );
 }
+int servo_pin = 9; //D9 on NANO board
+
+Servo myservo;
+int angle = 0;  
+
 void setup(){
   Wire.begin();
   Serial.begin(9600);
@@ -98,8 +106,31 @@ void displayTime(){
     Serial.println("Saturday");
     break;
   }
+
+
+  myservo.attach(servo_pin);
+  
 }
 void loop(){
+  //time module
   displayTime(); // display the real-time clock data on the Serial Monitor,
   delay(1000); // every second
+
+  //servo module
+  for(angle = 0; angle < 180; angle += 1)
+  {                          
+    myservo.write(angle);
+    delay(15);                       
+  } 
+
+  delay(1000);
+  
+  // move from 180 to 0 degrees with a negative angle of 5
+  for(angle = 180; angle>=1; angle-=5)
+  {                                
+    myservo.write(angle);
+    delay(5);                       
+  } 
+
+    delay(1000);
 }
