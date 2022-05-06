@@ -7,6 +7,7 @@
  */
  
 #include "Wire.h"
+#include "millisDelay.h"
 #include "Servo.h"
 #define DS3231_I2C_ADDRESS 0x68
 
@@ -15,8 +16,7 @@ const int BLED=11;
 const int GLED=10;
 const int RLED=6;
 int ledMode = 0;
-const long intervalLED = 5000;  
-unsigned long previousMillisLED = 0; 
+millisDelay ledDelay;
 
 const int BUTTON=2;
 boolean lastButton = LOW;
@@ -49,7 +49,8 @@ void setup(){
   pinMode (BUTTON, INPUT); 
   Wire.begin();
   Serial.begin(9600);
- 
+//  ledDelay.start(10000);  // delay that holds the lights on 
+//  ledintDelay.start(10000);  // delay that cycles through the colors
 { 
   myservo.attach(servo_pin);
 } 
@@ -207,6 +208,26 @@ void setMode(int mode){
   }
 }
 
+void checkTurnOnLed() { // the led task
+  // check if delay has timed out
+  if (ledDelay.isRunning()) { // only returns TRUE once.
+    ledMode++;
+    if (ledMode ==7) ledMode = 0;
+    setMode(ledMode);
+    Serial.println("Turned LED Off");
+  }
+}
+
+void checkTurnOffLed() { // the led task
+  // check if delay has timed out
+  if (ledDelay.justFinished()) { // only returns TRUE once.
+    digitalWrite(RLED, LOW);
+    digitalWrite(GLED, LOW);
+    digitalWrite(BLED, LOW);
+    Serial.println("Turned LED Off");
+  }
+}
+
 void loop(){
   
   unsigned long currentMillis = millis();
@@ -214,16 +235,12 @@ void loop(){
       previousMillis = currentMillis;
       displayTime(); 
       moveTehArm();
+      checkTurnOffLed();
     }
-  unsigned long currentMillisLED = millis();
   currentButton = debounce(lastButton);
   if(lastButton == LOW && currentButton == HIGH) {
-    do{
-        ledMode++;
-        if (ledMode ==7) ledMode = 0;
-        setMode(ledMode);
-        delay(1000);
-    }while(currentMillisLED - previousMillisLED >= intervalLED);
+    ledDelay.start(360000);
+    Serial.println("button pushed");
+    checkTurnOnLed();
+    }
   }
-  lastButton = currentButton;
-}
