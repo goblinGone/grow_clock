@@ -11,6 +11,15 @@
 #include "Servo.h"
 #define DS3231_I2C_ADDRESS 0x68
 
+//screen includes
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 const int BLED=11;
 const int GLED=10;
@@ -43,20 +52,33 @@ byte bcdToDec(byte val){
 }
 
 void setup(){
+  Serial.begin(115200);
+  //screen init
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
+  }
+  delay(2000);
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+
+  //led init
   pinMode (BLED, OUTPUT);
   pinMode (GLED, OUTPUT);
   pinMode (RLED, OUTPUT);
   pinMode (BUTTON, INPUT); 
+  
   Wire.begin();
   Serial.begin(9600);
 //  ledDelay.start(10000);  // delay that holds the lights on 
 //  ledintDelay.start(10000);  // delay that cycles through the colors
+
+//servo init
 { 
   myservo.attach(servo_pin);
 } 
-  // set the initial time here:
-  // DS3231 seconds, minutes, hours, day, date, month, year
-  //setDS3231time(25,36,21,6,6,5,22);
+  // set the time | seconds, minutes, hours, day, date, month, year
+  setDS3231time(25,36,21,6,6,5,22);
 }
 
   boolean debounce(boolean last){
@@ -154,6 +176,64 @@ void displayTime(){
   }
 }
 
+void displayTimeOLED(){
+  byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
+  // retrieve data from DS3231
+  readDS3231time(&second, &minute, &hour, &dayOfWeek, &dayOfMonth, &month,
+  &year);
+  // send it to the OLED
+  display.setTextSize(3);
+  display.setCursor(15,10);
+  display.print(hour, DEC);
+
+  display.setTextSize(3);
+  display.setCursor(45,10);
+  display.print(":");
+
+  display.setTextSize(3);
+  display.setCursor(60,10);
+  display.print(minute, DEC);
+
+  switch(dayOfWeek){
+  case 1:
+    display.setTextSize(2);
+    display.setCursor(15,40);
+    display.print("Sunday");
+    break;
+  case 2:
+    display.setTextSize(2);
+    display.setCursor(15,40);
+    display.print("Monday");
+    break;
+  case 3:
+    display.setTextSize(2);
+    display.setCursor(15,40);
+    display.print("Tuesday");
+    break;
+  case 4:
+    display.print("Wednesday");
+    break;
+  case 5:
+    display.setTextSize(2);
+    display.setCursor(15,40);
+    display.print("Thursday");
+    break;
+  case 6:
+    display.setTextSize(2);
+    display.setCursor(15,40);
+    display.print("Friday");
+    break;
+  case 7:
+    display.setTextSize(2);
+    display.setCursor(15,40);
+    display.print("Saturday");
+    break;
+  }
+
+  display.display(); 
+  
+ }
+
 void moveTehArm(){
   byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
   // retrieve data from DS3231
@@ -230,12 +310,20 @@ void checkTurnOffLed() { // the led task
 
 void loop(){
   
+  displayTimeOLED();
+  display.clearDisplay();
+//  display.setTextSize(1);
+//  display.setCursor(0,10);
+//  display.print("The Time Today is");
+//  display.display(); 
   unsigned long currentMillis = millis();
     if (currentMillis - previousMillis >= interval) {
       previousMillis = currentMillis;
       displayTime(); 
       moveTehArm();
       checkTurnOffLed();
+//      displayTimeOLED();
+
     }
   currentButton = debounce(lastButton);
   if(lastButton == LOW && currentButton == HIGH) {
