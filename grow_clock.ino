@@ -2,7 +2,6 @@
  * Grow Clock 
  * James A Ware 
  * MAY-22
- * appologies for the spaghetti
  * 
  */
  
